@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "client"
+		},
+		{
+			"path": "server"
+		}
+	],
+	"settings": {
+		"eslint.format.enable": true,
+		"eslint.validate": [
+			"javascript"
+		]
+	}
+}
