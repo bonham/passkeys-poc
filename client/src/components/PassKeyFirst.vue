@@ -1,64 +1,61 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
+import { client } from '@passwordless-id/webauthn'
+import type { RegistrationEncoded } from '@passwordless-id/webauthn/dist/esm/types';
+
 
 const visible = ref(false)
+const localAuthenticatorAvailable = ref(false)
 
 checkPrereqs()
 
-function checkPrereqs() {
+async function checkPrereqs() {
 
-  if (window.PublicKeyCredential &&
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable &&
-    PublicKeyCredential.isConditionalMediationAvailable) {
-    // Check if user verifying platform authenticator is available.  
-    Promise.all([
-      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(),
-      PublicKeyCredential.isConditionalMediationAvailable(),
-    ]).then(results => {
-      if (results.every(r => r === true)) {
-        console.log("yes")
-        visible.value = true
-      } else {
-        console.log("no")
-      }
-    });
-  } else {
-    console.log("Verification one failed")
+  if (client.isAvailable()) {
+    visible.value = true
   }
+
+  if (await client.isLocalAuthenticator())
+    localAuthenticatorAvailable.value = true
 }
 
 async function handleCreate() {
   console.log("handleCreate")
 
-  const uidArray = new Int8Array(2)
-  uidArray[0] = 42
+  const challenge = "a7c61ef9-dc23-4806-b486-2428938a547e"
+  const registration = await client.register("Arnaud", challenge, {
+    "authenticatorType": "both",
+    "userVerification": "required",
+    "timeout": 60000,
+    "attestation": false,
+    "debug": false
+  })
+  console.log("reg", registration)
+  await sendRegToServer(registration)
 
+}
 
-  const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
-    challenge: new ArrayBuffer(0),
-    rp: {
-      name: "Example",
-      id: "localhost",
-    },
-    user: {
-      id: uidArray,
-      name: "john78",
-      displayName: "John",
-    },
-    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-    authenticatorSelection: {
-      requireResidentKey: true
+async function sendRegToServer(registration: RegistrationEncoded) {
+  const body = JSON.stringify(registration)
+  const headers = new Headers()
+  headers.append("Content-Type", "application/json")
+
+  const url = 'http://localhost:5000/api/v1/auth/register'
+  const opts: RequestInit = {
+    method: 'POST',
+    headers,
+    body
+  }
+
+  try {
+    const resp = await fetch(url, opts);
+    if (!resp.ok) {
+      console.error("Response not ok", resp)
+      throw new Error("Registration response not ok")
     }
-
-
-  };
-
-  const credential = await navigator.credentials.create({
-    publicKey: publicKeyCredentialCreationOptions
-  });
-
-  console.log("Cred", credential)
-  // Encode and send the credential to the server for verification.  
+  } catch (e) {
+    console.error("Network error during fetch", e);
+  }
 
 }
 
@@ -68,5 +65,7 @@ async function handleCreate() {
   <div>Hello</div>
   <div v-if="visible">
     <button @click="handleCreate">Create new passkey</button>
+    <div>Local Authenticator <div v-if="!localAuthenticatorAvailable">not</div> available
+    </div>
   </div>
 </template>
