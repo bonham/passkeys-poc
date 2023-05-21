@@ -19,10 +19,28 @@ async function checkPrereqs() {
     localAuthenticatorAvailable.value = true
 }
 
+type ChallengeResponse = { uuid: string }
+
+async function getChallenge(): Promise<string> {
+  const url = 'http://localhost:5000/api/v1/auth/challenge'
+  var resp: Response
+  try {
+    resp = await fetch(url)
+    if (!resp.ok) {
+      throw new Error("Response not ok" + resp)
+    } else {
+      const respj: ChallengeResponse = await resp.json()
+      return respj.uuid
+    }
+  } catch (e) {
+    throw new Error("Network error during fetch" + e)
+  }
+}
+
 async function handleCreate() {
   console.log("handleCreate")
 
-  const challenge = "a7c61ef9-dc23-4806-b486-2428938a547e"
+  const challenge = await getChallenge()
   const registration = await client.register("Arnaud", challenge, {
     "authenticatorType": "both",
     "userVerification": "required",
