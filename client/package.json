@@ -13,6 +13,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@passwordless-id/webauthn": "^1.2.4",
     "vue": "^3.3.2"
   },
   "devDependencies": {
