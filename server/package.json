@@ -19,6 +19,8 @@
   "license": "MIT",
   "dependencies": {
     "@passwordless-id/webauthn": "^1.2.4",
+    "@types/connect-pg-simple": "^7.0.0",
+    "@types/pg": "^8.10.0",
     "connect-pg-simple": "^8.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
