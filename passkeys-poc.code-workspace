@@ -19,7 +19,9 @@
 			"javascript"
 		],
 		"jest.disabledWorkspaceFolders": [
-			"client"
+			"client",
+			"server",
+			"passkeys-poc"
 		]
 	}
 }

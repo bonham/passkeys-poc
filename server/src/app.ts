@@ -10,7 +10,8 @@ import pg from 'pg';
 import * as middlewares from './middlewares';
 import api from './api';
 
-const dotenvResult = require('dotenv').config();
+import * as dotenv from 'dotenv';
+const dotenvResult = dotenv.config();
 if (dotenvResult.error) {
   console.error('Missing configuration: Please copy .env.sample to .env and modify config');
   process.exit(1);
