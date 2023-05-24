@@ -6,6 +6,7 @@ import type { RegistrationEncoded } from '@passwordless-id/webauthn/dist/esm/typ
 
 const visible = ref(false)
 const localAuthenticatorAvailable = ref(false)
+const regstatus = ref("None")
 
 checkPrereqs()
 
@@ -19,18 +20,22 @@ async function checkPrereqs() {
     localAuthenticatorAvailable.value = true
 }
 
-type ChallengeResponse = { uuid: string }
+type ChallengeResponse = { challenge: string }
 
 async function getChallenge(): Promise<string> {
   const url = 'http://localhost:5000/api/v1/auth/challenge'
   var resp: Response
+  const opts: RequestInit = {
+    method: 'GET',
+    credentials: "include"
+  }
   try {
-    resp = await fetch(url)
+    resp = await fetch(url, opts)
     if (!resp.ok) {
       throw new Error("Response not ok" + resp)
     } else {
       const respj: ChallengeResponse = await resp.json()
-      return respj.uuid
+      return respj.challenge
     }
   } catch (e) {
     throw new Error("Network error during fetch" + e)
@@ -38,9 +43,9 @@ async function getChallenge(): Promise<string> {
 }
 
 async function handleCreate() {
-  console.log("handleCreate")
 
   const challenge = await getChallenge()
+  if (!challenge) throw new Error("Challenge not defined")
   const registration = await client.register("Arnaud", challenge, {
     "authenticatorType": "both",
     "userVerification": "required",
@@ -49,8 +54,8 @@ async function handleCreate() {
     "debug": false
   })
   console.log("reg", registration)
-  await sendRegToServer(registration)
-
+  const success = await sendRegToServer(registration)
+  regstatus.value = success ? "Success" : "Failure"
 }
 
 async function sendRegToServer(registration: RegistrationEncoded) {
@@ -62,7 +67,8 @@ async function sendRegToServer(registration: RegistrationEncoded) {
   const opts: RequestInit = {
     method: 'POST',
     headers,
-    body
+    body,
+    credentials: "include"
   }
 
   try {
@@ -70,9 +76,12 @@ async function sendRegToServer(registration: RegistrationEncoded) {
     if (!resp.ok) {
       console.error("Response not ok", resp)
       throw new Error("Registration response not ok")
+    } else {
+      return true
     }
   } catch (e) {
-    console.error("Network error during fetch", e);
+    console.error("Error during fetch", e);
+    return false
   }
 
 }
@@ -82,8 +91,11 @@ async function sendRegToServer(registration: RegistrationEncoded) {
 <template>
   <div>Hello</div>
   <div v-if="visible">
-    <button @click="handleCreate">Create new passkey</button>
-    <div>Local Authenticator <div v-if="!localAuthenticatorAvailable">not</div> available
+    <button @click="handleCreate">Register</button>
+    <div>Local Authenticator
+      <div v-if="!localAuthenticatorAvailable">not</div>
+      available
     </div>
+    <div>Registration status: {{ regstatus }}</div>
   </div>
 </template>

@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { Session } from 'express-session';
 import { server } from '@passwordless-id/webauthn';
+
 // import type { RegistrationParsed } from '@passwordless-id/webauthn/dist/esm/types';
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.post('/register', async (req: RequestWithSession, res) => {
   session.challenge = undefined;
 
   if (storedChallenge === undefined) {
+    console.log('Stored challenge not defined - why?');
     res.sendStatus(403);
     res.end();
   } else {
