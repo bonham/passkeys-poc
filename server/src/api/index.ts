@@ -1,7 +1,7 @@
 import express from 'express';
 
-import MessageResponse from '../interfaces/MessageResponse';
-import auth from './auth';
+import MessageResponse from '../interfaces/MessageResponse.js';
+import auth from './auth.js';
 
 const router = express.Router();
 

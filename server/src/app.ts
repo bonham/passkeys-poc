@@ -7,8 +7,8 @@ import connectPgSimple from 'connect-pg-simple';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import pg from 'pg';
 
-import * as middlewares from './middlewares';
-import api from './api';
+import * as middlewares from './middlewares.js';
+import api from './api/index.js';
 
 import * as dotenv from 'dotenv';
 const dotenvResult = dotenv.config();
