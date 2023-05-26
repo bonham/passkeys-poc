@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { client } from '@passwordless-id/webauthn'
-import type { RegistrationEncoded } from '@passwordless-id/webauthn/dist/esm/types';
+import type { RegistrationEncoded, AuthenticationEncoded } from '@passwordless-id/webauthn/dist/esm/types';
 
 
 const visible = ref(false)
 const localAuthenticatorAvailable = ref(false)
 const regstatus = ref("None")
+const loginstatus = ref("None")
 
 checkPrereqs()
 
@@ -54,16 +55,24 @@ async function handleCreate() {
     "debug": false
   })
   console.log("reg", registration)
-  const success = await sendRegToServer(registration)
+  let response: Response
+  try {
+    response = await sendRegToServer(registration)
+  } catch (e) {
+    console.log("Failure in registration call", e)
+    regstatus.value = "Communication failure"
+    return
+  }
+  const success: boolean = response.ok
   regstatus.value = success ? "Success" : "Failure"
 }
 
-async function sendRegToServer(registration: RegistrationEncoded) {
-  const body = JSON.stringify(registration)
+async function sendJSONToServer(path: string, payload: string) {
+  const body = payload
   const headers = new Headers()
   headers.append("Content-Type", "application/json")
 
-  const url = 'http://localhost:5000/api/v1/auth/register'
+  const url = `http://localhost:5000${path}`
   const opts: RequestInit = {
     method: 'POST',
     headers,
@@ -71,20 +80,52 @@ async function sendRegToServer(registration: RegistrationEncoded) {
     credentials: "include"
   }
 
+  // can throw error
+  const resp = await fetch(url, opts);
+  return resp
+}
+
+async function sendRegToServer(registration: RegistrationEncoded) {
+  const uri = "/api/v1/auth/register"
+  const payload = JSON.stringify(registration)
+  return await sendJSONToServer(uri, payload)
+}
+
+async function sendAuthDataToServer(authentication: AuthenticationEncoded) {
+  const uri = "/api/v1/auth/login"
+  const payload = JSON.stringify(authentication)
+  return await sendJSONToServer(uri, payload)
+}
+
+async function handleLogin() {
+  const challenge = await getChallenge()
+  let authentication: AuthenticationEncoded
   try {
-    const resp = await fetch(url, opts);
-    if (!resp.ok) {
-      console.error("Response not ok", resp)
-      throw new Error("Registration response not ok")
-    } else {
-      return true
-    }
+    authentication = await client.authenticate([], challenge, {
+      "authenticatorType": "both",
+      "userVerification": "required",
+      "timeout": 60000
+    })
+    console.log("auth", authentication)
   } catch (e) {
-    console.error("Error during fetch", e);
-    return false
+    console.log("Passkey selection failed", e)
+    loginstatus.value = "Passkey selection failed"
+    return
   }
 
+  let authResponse: Response
+  try {
+    authResponse = await sendAuthDataToServer(authentication)
+  } catch (e) {
+    console.error("Failure in authentication call", e)
+    loginstatus.value = "Communication failure"
+    return
+  }
+
+  loginstatus.value = authResponse.ok ? "Success" : "Unauthorized"
+
 }
+
 
 </script>
 
@@ -97,5 +138,9 @@ async function sendRegToServer(registration: RegistrationEncoded) {
       available
     </div>
     <div>Registration status: {{ regstatus }}</div>
+    <div>
+      <button @click="handleLogin">Login</button>
+      <div>Login status: {{ loginstatus }}</div>
+    </div>
   </div>
 </template>

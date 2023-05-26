@@ -2,10 +2,11 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { Session } from 'express-session';
 import { server } from '@passwordless-id/webauthn';
-import { RegistrationParsed } from '@passwordless-id/webauthn/dist/esm/types.js';
+import type { AuthenticationEncoded, RegistrationParsed } from '@passwordless-id/webauthn/dist/esm/types.js';
 import pg from 'pg';
 
 import * as dotenv from 'dotenv';
+import { RegistrationEncoded } from '@passwordless-id/webauthn/dist/esm/types.js';
 const dotenvResult = dotenv.config();
 if (dotenvResult.error) {
   console.error('Missing configuration: Please copy .env.sample to .env and modify config');
@@ -45,8 +46,23 @@ async function processRegistration(regParsed: RegistrationParsed) {
   return dbresult;
 }
 
+async function getCredentials(credentialId: string) {
+  if (!credentialId) throw Error('credentialid is false');
+  const sql = `select data from public.credentialkey where id = '${credentialId}'`;
+  const res = await pgpool.query(sql);
+  if (res.rowCount > 1) throw Error('Row count is higher than 1');
+  if (res.rowCount === 0) return null;
+  const rawData = res.rows[0].data;
+  const credentials = JSON.parse(rawData) as {
+    id: string;
+    publicKey: string;
+    algorithm: 'RS256' | 'ES256';
+  };
+  return credentials;
+}
+
 router.post('/register', async (req: RequestWithSession, res) => {
-  const registration = req.body;
+  const registration = req.body as RegistrationEncoded;
   const session = (req.session as MySession);
 
   // read and save challenge
@@ -79,9 +95,47 @@ router.post('/register', async (req: RequestWithSession, res) => {
 });
 
 
-router.get('/login', (req: RequestWithSession, res: Response) => {
-  (req.session as MySession).user = 'Joe';
-  res.send('ok');
+router.post('/login', async (req: RequestWithSession, res: Response) => {
+  const session = (req.session as MySession);
+  const authentication = req.body as AuthenticationEncoded;
+  const credId = authentication.credentialId;
+  if (credId === undefined) {
+    res.status(400).send('Could not find credential id in payload');
+  }
+
+  const credentialKey = await getCredentials(credId);
+  if (credentialKey === null) {
+    console.log('Credentialkey not found in db');
+    res.sendStatus(401);
+    return; // satisfy ts
+  }
+  const storedChallenge = session.challenge;
+
+
+  if (storedChallenge === undefined) {
+    console.log('Stored challenge not defined - why?');
+    res.sendStatus(401);
+
+  } else {
+
+    const expected = {
+      challenge: storedChallenge,
+      origin: 'http://localhost:5173',
+      userVerified: true,
+      counter: 0,
+    };
+
+    try {
+      const authenticationParsed = await server.verifyAuthentication(authentication, credentialKey, expected);
+      console.log('Auth parsed:', authenticationParsed);
+      session.user = authenticationParsed.credentialId;
+      res.sendStatus(200);
+    } catch (e) {
+      console.error('Authentication failed:', e);
+      res.sendStatus(401);
+    }
+  }
+
 });
 
 router.get('/challenge', (req: RequestWithSession, res) => {
