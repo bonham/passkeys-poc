@@ -36,6 +36,7 @@ function isAuthenticated(req: Request, res: Response, next: NextFunction) {
 
 async function processRegistration(regParsed: RegistrationParsed) {
   const credential = regParsed.credential;
+  console.log('Fullpayload:', regParsed);
   console.log(`User ${regParsed.username} was registered`);
   console.log(credential);
 
@@ -49,6 +50,7 @@ async function processRegistration(regParsed: RegistrationParsed) {
 async function getCredentials(credentialId: string) {
   if (!credentialId) throw Error('credentialid is false');
   const sql = `select data from public.credentialkey where id = '${credentialId}'`;
+  console.log('sql:', sql);
   const res = await pgpool.query(sql);
   if (res.rowCount > 1) throw Error('Row count is higher than 1');
   if (res.rowCount === 0) return null;
