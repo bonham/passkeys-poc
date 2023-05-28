@@ -153,7 +153,10 @@ router.post('/register', async (req: RequestWithSession, res) => {
 
     const saveSuccess = await authdb.saveAuthenticator(newAuthenticator, userid);
     if (saveSuccess) {
+
+      // Success !!
       return res.json(verification);
+
     } else {
       console.log('Authenticator could not be saved');
       return res.sendStatus(401);
