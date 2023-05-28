@@ -2,11 +2,14 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { Session } from 'express-session';
 import pg from 'pg';
+import type { QueryConfig } from 'pg';
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
-import type { UserModel, Authenticator } from './server.d.ts';
+import type { Authenticator } from './server.d.ts';
+import type { AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/typescript-types';
+import type { VerifiedRegistrationResponse } from '@simplewebauthn/server';
 
 // Human-readable title for your website
 const rpName = 'SimpleWebAuthn Example';
@@ -48,26 +51,78 @@ function isAuthenticated(req: Request, res: Response, next: NextFunction) {
 }
 
 
-async function getUserAuthenticators(user: UserModel) {
 
-  const query = {
+// currently logged in user ( for registration )
+// this must come from an authentiation pin or invite link
+// userid act as nickname and should be speaking
+// as we do not store anything else about the user on server side
+async function getCurrrentUserId(): Promise<string> {
+  return 'usernickname1';
+}
+
+async function getUserAuthenticators(user: string) {
+
+  const query: QueryConfig = {
     text: 'SELECT credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp, transports FROM public.cred_authenticators where userid = $1',
-    values: [user.id],
+    values: [user],
   };
   const res = await pgpool.query(query);
-  const authenticators: Authenticator[] = res.rows;
+  const authenticators: Authenticator[] = res.rows.map((row => {
+    const credIDEncoded: string = row.credentialid;
+    if ((credIDEncoded === undefined) || credIDEncoded.length == 0) throw new Error('Credential Id undefined');
+    const credBuffer = Buffer.from(credIDEncoded, 'base64url');
+    const transportsArray = JSON.parse(row.transports);
+
+    let a: Authenticator;
+    a = {
+      credentialID: credBuffer,
+      credentialPublicKey: row.credentialpublickey,
+      counter: row.counter,
+      credentialDeviceType: row.credentialdevicetype,
+      credentialBackedUp: row.credentialbackedup,
+      transports: transportsArray,
+    };
+    for (const [key, value] of Object.entries(a)) {
+      let ok = true;
+
+      if (value === undefined) {
+        ok = false;
+        console.error(`Prop ${key} is undefined`);
+      }
+      if (!ok) throw new Error('Authenticator has missing values. See error log');
+    }
+    return a;
+  }));
   return authenticators;
 }
 
-// currently logged in user ( for registration )
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function getUserFromDB(userid: string) {
-  const user: UserModel = {
-    id: 'user1',
-    username: 'Paul',
-    currentChallenge: 'what',
+async function saveAuthenticator(auth: Authenticator, userid: string) {
+
+  const credIdBuf = Buffer.from(auth.credentialID);
+  const credIdEncoded = credIdBuf.toString('base64url');
+  const transportsEncoded = JSON.stringify(auth.transports);
+
+  const query: QueryConfig = {
+    text: 'INSERT INTO public.cred_authenticators' +
+      '(credentialid, credentialpublickey, counter, credentialdevicetype, credentialbackedup, transports, userid, creationdate) ' +
+      'VALUES ($1, $2, $3, $4, $5, $6, $7, $8);',
+    values: [
+      credIdEncoded, auth.credentialPublicKey, auth.counter, auth.credentialDeviceType,
+      auth.credentialBackedUp, transportsEncoded, userid, new Date().toUTCString(),
+    ],
   };
-  return user;
+  try {
+    const r = await pgpool.query(query);
+    if (r.rowCount != 1) {
+      console.error(`Expected rowcount is not 1 but ${r.rowCount}`);
+      return false;
+    }
+
+  } catch (error) {
+    console.error('Could not save authenticator', error);
+    return false;
+  }
+  return true;
 }
 
 router.get('/regoptions', async (req: RequestWithSession, res) => {
@@ -75,17 +130,18 @@ router.get('/regoptions', async (req: RequestWithSession, res) => {
   // (Pseudocode) Retrieve the user from the database
   // after they've logged in
   // const user: UserModel = getUserFromDB(loggedInUserId);
-  const user = await getUserFromDB('fake');
+  const userid = await getCurrrentUserId();
+  req.session.user = userid;
 
   // (Pseudocode) Retrieve any of the user's previously-
   // registered authenticators
-  const userAuthenticators: Authenticator[] = await getUserAuthenticators(user);
+  const userAuthenticators: Authenticator[] = await getUserAuthenticators(userid);
 
   const options = generateRegistrationOptions({
     rpName,
     rpID,
-    userID: user.id,
-    userName: user.username,
+    userID: userid,
+    userName: userid, // we do not want personal identifiable information
     // Don't prompt users for additional information about the authenticator
     // (Recommended for smoother UX)
     attestationType: 'none',
@@ -133,6 +189,7 @@ router.get('/regoptions', async (req: RequestWithSession, res) => {
 //   return credentials;
 // }
 
+
 router.post('/register', async (req: RequestWithSession, res) => {
   //const user = await getUserFromDB('fake');
   const expectedChallenge = req.session.challenge;
@@ -141,10 +198,16 @@ router.post('/register', async (req: RequestWithSession, res) => {
     res.sendStatus(401);
     return;
   }
+  const userid = req.session.user;
+  if (userid === undefined) {
+    console.log('Current user is undefined');
+    res.sendStatus(401);
+    return;
+  }
+  const body: RegistrationResponseJSON = req.body;
+  const transports: AuthenticatorTransportFuture[] = body.response.transports ?? [];
 
-  const { body } = req;
-
-  let verification;
+  let verification: VerifiedRegistrationResponse;
   try {
     verification = await verifyRegistrationResponse({
       response: body,
@@ -154,10 +217,49 @@ router.post('/register', async (req: RequestWithSession, res) => {
     });
   } catch (error) {
     console.error(error);
-    return res.status(400).send({ error: (error as any).message }); // dirty
+    let message: string;
+    if (error instanceof Error) {
+      message = error.name + ' / ' + error.message;
+    } else {
+      message = String(error);
+    }
+    res.status(401).send({ error: message });
+    return;
   }
 
-  res.json(verification);
+  if (verification.verified) {
+
+    const { registrationInfo } = verification;
+    if (registrationInfo === undefined) {
+      console.info('registrationInfo is undefined');
+      res.sendStatus(401);
+      return;
+    }
+    const { credentialPublicKey, credentialID, counter, credentialDeviceType, credentialBackedUp } = registrationInfo;
+
+    const newAuthenticator: Authenticator = {
+      credentialPublicKey: credentialPublicKey,
+      credentialID,
+      counter,
+      credentialDeviceType,
+      credentialBackedUp,
+      transports,
+    };
+
+    const saveSuccess = await saveAuthenticator(newAuthenticator, userid);
+    if (saveSuccess) {
+      return res.json(verification);
+    } else {
+      console.log('Authenticator could not be saved');
+      res.sendStatus(401);
+      return;
+    }
+
+  } else {
+    console.error('Unexpected: Verification not verified, but no exception thrown before');
+    res.sendStatus(401);
+    return;
+  }
 });
 
 // router.post('/register', async (req: RequestWithSession, res) => {

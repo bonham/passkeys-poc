@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { startRegistration } from '@simplewebauthn/browser';
-import type { RegistrationResponseJSON } from '@simplewebauthn/typescript-types'
+import type { RegistrationResponseJSON, PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/typescript-types'
+import type { VerifiedRegistrationResponse } from '@simplewebauthn/server'
 
 const regstatus = ref("None")
 // const loginstatus = ref("None")
@@ -40,35 +41,63 @@ const regstatus = ref("None")
 //   }
 // }
 
+function getErrorMessage(error: any) {
+  if (error instanceof Error) {
+    return `Name: ${error.name}, Message: ${error.message}`
+  } else return `Error object type ${typeof error}, Value: ${String(error)}`
+}
+
 async function handleCreate() {
 
   // GET registration options from the endpoint that calls
   // @simplewebauthn/server -> generateRegistrationOptions()
   const resp = await getWithCORS('/api/v1/auth/regoptions');
 
+  const regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
+
   let attResp: RegistrationResponseJSON;
   try {
     // Pass the options to the authenticator and wait for a response
-    attResp = await startRegistration(await resp.json());
+    attResp = await startRegistration(regoptions);
   } catch (error) {
 
     if (error instanceof Error) {
       // Some basic error handling
       if (error.name === 'InvalidStateError') {
-        regstatus.value = 'Error: Authenticator was probably already registered by user';
+        regstatus.value = 'Authenticator was probably already registered by user';
+        return
       } else {
-        regstatus.value = error.name + " / " + error.message;
+        console.error(getErrorMessage(error))
+        regstatus.value = "Failed on client side";
+        return
       }
+    } else {
+      console.error(getErrorMessage(error))
+      regstatus.value = "Failed on client side (2)"
+      return
     }
-    throw error;
+
   }
 
   // POST the response to the endpoint that calls
   // @simplewebauthn/server -> verifyRegistrationResponse()
-  const verificationResp = await sendJSONToServer('/api/v1/auth/register', JSON.stringify(attResp));
+  let verificationResp: Response
+  try {
+    verificationResp = await sendJSONToServer('/api/v1/auth/register', JSON.stringify(attResp));
+    if (!verificationResp.ok) {
+      console.log(`Verification failed with response:`, verificationResp)
+      regstatus.value = "Failed"
+      return
+    }
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    console.log("Error when calling registration endpoint: " + msg);
+    regstatus.value = "Failed"
+    return
+  }
 
   // Wait for the results of verification
-  const verificationJSON = await verificationResp.json();
+  const verificationJSON = await verificationResp.json() as VerifiedRegistrationResponse;
   console.log("verificationJson:", verificationJSON)
 
   // Show UI appropriate for the `verified` status
@@ -186,7 +215,7 @@ async function sendJSONToServer(path: string, payload: string) {
   <button @click="handleCreate">Register</button>
   <div>Registration status: {{ regstatus }}</div>
   <!-- <div>
-                <button @click="handleLogin">Login</button>
-                <div>Login status: {{ loginstatus }}</div>
-              </div> -->
+                                      <button @click="handleLogin">Login</button>
+                                      <div>Login status: {{ loginstatus }}</div>
+                                    </div> -->
 </template>

@@ -1,12 +1,7 @@
-export type UserModel = {
-  id: string;
-  username: string;
-  currentChallenge?: string;
-};
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/typescript-types';
+
 
 /**
- * It is strongly advised that authenticators get their own DB
- * table, ideally with a foreign key to a specific UserModel.
  *
  * "SQL" tags below are suggestions for column data types and
  * how best to store data received during registration for use
@@ -26,5 +21,5 @@ export type Authenticator = {
   credentialBackedUp: boolean;
   // SQL: `VARCHAR(255)` and store string array as a CSV string
   // Ex: ['usb' | 'ble' | 'nfc' | 'internal']
-  transports?: AuthenticatorTransport[];
+  transports: AuthenticatorTransportFuture[];
 };
