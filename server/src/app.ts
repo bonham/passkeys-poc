@@ -11,6 +11,7 @@ import * as middlewares from './middlewares.js';
 import api from './api/index.js';
 
 import * as dotenv from 'dotenv';
+
 const dotenvResult = dotenv.config();
 if (dotenvResult.error) {
   console.error('Missing configuration: Please copy .env.sample to .env and modify config');

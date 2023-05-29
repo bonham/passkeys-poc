@@ -10,14 +10,9 @@ export class AutenticatorDb {
     this.pgpool = pgpool;
   }
 
-  async getUserAuthenticators(user: string) {
+  authenticatorFromRows(rows: any[]): Authenticator[] {
 
-    const query: QueryConfig = {
-      text: 'SELECT credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp, transports FROM public.cred_authenticators where userid = $1',
-      values: [user],
-    };
-    const res = await this.pgpool.query(query);
-    const authenticators: Authenticator[] = res.rows.map((row => {
+    const authenticators: Authenticator[] = rows.map(row => {
       const credIDEncoded: string = row.credentialid;
       if ((credIDEncoded === undefined) || credIDEncoded.length == 0) throw new Error('Credential Id undefined');
       const credBuffer = Buffer.from(credIDEncoded, 'base64url');
@@ -42,8 +37,28 @@ export class AutenticatorDb {
         if (!ok) throw new Error('Authenticator has missing values. See error log');
       }
       return a;
-    }));
+    });
     return authenticators;
+  }
+
+  async getUserAuthenticators(user: string) {
+
+    const query: QueryConfig = {
+      text: 'SELECT credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp, transports FROM public.cred_authenticators where userid = $1',
+      values: [user],
+    };
+    const res = await this.pgpool.query(query);
+    return this.authenticatorFromRows(res.rows);
+
+  }
+
+  async getAuthenticatorsById(authenticatorId: string) {
+    const query: QueryConfig = {
+      text: 'SELECT credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp, transports FROM public.cred_authenticators where credentialID = $1',
+      values: [authenticatorId],
+    };
+    const res = await this.pgpool.query(query);
+    return this.authenticatorFromRows(res.rows);
   }
 
   async saveAuthenticator(auth: Authenticator, userid: string) {
