@@ -6,6 +6,10 @@ import type { VerifiedAuthenticationResponse, VerifiedRegistrationResponse } fro
 
 const regstatus = ref("None")
 const loginstatus = ref("None")
+const registernickname = ref("")
+const loginnickname = ref("")
+const registerNicknameFieldInValid = ref(false)
+const loginNicknameFieldInValid = ref(false)
 
 // checkPrereqs()
 
@@ -27,9 +31,14 @@ function getErrorMessage(error: any) {
 
 async function handleCreate() {
 
+  if (registernickname.value == "") {
+    registerNicknameFieldInValid.value = true
+    return
+  }
+
   // GET registration options from the endpoint that calls
   // @simplewebauthn/server -> generateRegistrationOptions()
-  const resp = await getWithCORS('/api/v1/auth/regoptions');
+  const resp = await getWithCORS('/api/v1/auth/regoptions/' + registernickname.value);
 
   const regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
 
@@ -120,8 +129,13 @@ async function sendJSONToServer(path: string, payload: string) {
 
 async function handleLogin() {
 
-  const authuser = "usernickname1"
-  const authoptionsUrl = "/api/v1/auth/authoptions" + "?authuser=" + authuser
+  if (loginnickname.value == "") {
+    loginNicknameFieldInValid.value = true
+    return
+  }
+
+  const authuser = loginnickname.value
+  const authoptionsUrl = "/api/v1/auth/authoptions/" + authuser
   const resp = await getWithCORS(authoptionsUrl);
   const regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
 
@@ -169,11 +183,25 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div>Hello</div>
-  <button @click="handleCreate">Register</button>
-  <div>Registration status: {{ regstatus }}</div>
   <div>
-    <button @click="handleLogin">Login</button>
-    <div>Login status: {{ loginstatus }}</div>
+    <div class="border border-secondary-subtle p-3 mb-2 mt-2">
+
+      <div class="input-group">
+        <input v-model="registernickname" type="text" :class="{ 'is-invalid': registerNicknameFieldInValid }"
+          class="form-control" placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2">
+        <button @click="handleCreate" class="btn btn-outline-secondary" type="button" id="button-addon2">Register</button>
+      </div>
+      <div class="mt-2">Status: {{ regstatus }}</div>
+    </div>
+
+    <div class="border border-secondary-subtle p-3">
+
+      <div class="input-group">
+        <input v-model="loginnickname" type="text" :class="{ 'is-invalid': loginNicknameFieldInValid }"
+          class="form-control" placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2">
+        <button @click="handleLogin" class="btn btn-outline-secondary" type="button" id="button-addon2">Login</button>
+      </div>
+      <div class="mt-2">Status: {{ loginstatus }}</div>
+    </div>
   </div>
 </template>

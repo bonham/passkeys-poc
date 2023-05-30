@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { getRegistrationUserId } from './getRegistrationUserid.js';
+import type { Request } from 'express-serve-static-core';
+
+//import { getRegistrationUserId } from './getRegistrationUserid.js';
 import { AutenticatorDb } from './AuthenticatorDb.js';
 
 import type { Authenticator } from '../server.js';
@@ -10,7 +12,9 @@ const router = Router();
 
 export function makeRegistrationOptionsRoute(rpName: string, rpID: string, authdb: AutenticatorDb) {
 
-  router.get('/regoptions', async (req, res) => {
+  router.get('/regoptions/:nickname', async (req: Request, res) => {
+
+    const reguser = req.params.nickname;
 
     let myreq: any;
 
@@ -26,7 +30,9 @@ export function makeRegistrationOptionsRoute(rpName: string, rpID: string, authd
     // (Pseudocode) Retrieve the user from the database
     // after they've logged in
     // const user: UserModel = getUserFromDB(loggedInUserId);
-    const registrationuser = await getRegistrationUserId();
+
+    //const registrationuser = await getRegistrationUserId();
+    const registrationuser = reguser;
     myreq.session.reguser = registrationuser;
 
     // (Pseudocode) Retrieve any of the user's previously-

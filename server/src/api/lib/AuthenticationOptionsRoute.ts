@@ -10,9 +10,9 @@ const router = Router();
 export function makeAuthenticationOptionsRoute(authdb: AutenticatorDb) {
 
   // call this route with /authoptions?authuser=myuserid
-  router.get('/authoptions', async (req: Request, res) => {
+  router.get('/authoptions/:authuser', async (req: Request, res) => {
 
-    const authuser = req.params.authuser as string;
+    const authuser = req.params.authuser;
     const userAuthenticators: Authenticator[] = await authdb.getUserAuthenticators(authuser);
 
     try {
