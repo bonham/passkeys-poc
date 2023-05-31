@@ -19,8 +19,22 @@ async function handleLogin() {
 
   const authuser = loginnickname.value
   const authoptionsUrl = "/api/v1/auth/authoptions/" + authuser
-  const resp = await getWithCORS(authoptionsUrl);
-  const regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
+
+  let resp: Response
+  try {
+    resp = await getWithCORS(authoptionsUrl);
+  } catch (error) {
+    loginstatus.value = getErrorMessage(error)
+    return
+  }
+  if (!resp.ok) {
+    const t = await resp.text()
+    loginstatus.value = t
+    return
+  }
+
+  let regoptions
+  regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
 
   let asseResp;
   try {
