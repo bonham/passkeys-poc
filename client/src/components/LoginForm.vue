@@ -1,0 +1,77 @@
+<script lang="ts" setup>
+
+import { ref } from 'vue'
+import { getWithCORS, sendJSONToServer, getErrorMessage } from '@/lib/httpHelpers';
+import { startAuthentication } from '@simplewebauthn/browser';
+import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/typescript-types'
+import type { VerifiedAuthenticationResponse, } from '@simplewebauthn/server'
+
+const loginstatus = ref("None")
+const loginnickname = ref("")
+const loginNicknameFieldInValid = ref(false)
+
+async function handleLogin() {
+
+  if (loginnickname.value == "") {
+    loginNicknameFieldInValid.value = true
+    return
+  }
+
+  const authuser = loginnickname.value
+  const authoptionsUrl = "/api/v1/auth/authoptions/" + authuser
+  const resp = await getWithCORS(authoptionsUrl);
+  const regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
+
+  let asseResp;
+  try {
+    // Pass the options to the authenticator and wait for a response
+    asseResp = await startAuthentication(regoptions);
+  } catch (error) {
+    // Some basic error handling
+    loginstatus.value = "Start Auth error: " + String(error);
+    return
+  }
+
+  // POST the response to the endpoint that calls
+  // @simplewebauthn/server -> verifyAuthenticationResponse()
+  let verificationResp: Response
+  try {
+    verificationResp = await sendJSONToServer('/api/v1/auth/authentication', JSON.stringify(asseResp))
+    if (!verificationResp.ok) {
+      console.log(`Verification failed with response:`, verificationResp)
+      loginstatus.value = "Failed"
+      return
+    }
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    console.log("Error when calling registration endpoint: " + msg);
+    loginstatus.value = "Failed"
+    return
+  }
+
+  // Wait for the results of verification
+  const verificationJSON = await verificationResp.json() as VerifiedAuthenticationResponse;
+  console.log("verificationJson:", verificationJSON)
+
+  // Show UI appropriate for the `verified` status
+  if (verificationJSON && verificationJSON.verified) {
+    loginstatus.value = 'Success!';
+  } else {
+    loginstatus.value = `Oh no, something went wrong! Response: ${JSON.stringify(
+      verificationJSON,
+    )}`;
+  }
+};
+
+</script>
+<template>
+  <div class="border border-secondary-subtle p-3">
+
+    <div class="input-group">
+      <input v-model="loginnickname" type="text" :class="{ 'is-invalid': loginNicknameFieldInValid }" class="form-control"
+        placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2">
+      <button @click="handleLogin" class="btn btn-outline-secondary" type="button" id="button-addon2">Login</button>
+    </div>
+    <div class="mt-2">Status: {{ loginstatus }}</div>
+  </div>
+</template>
