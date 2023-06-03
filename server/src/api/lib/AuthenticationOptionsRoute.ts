@@ -15,6 +15,14 @@ export function makeAuthenticationOptionsRoute(authdb: AutenticatorDb) {
     const authuser = req.params.authuser;
     const userAuthenticators: Authenticator[] = await authdb.getUserAuthenticators(authuser);
 
+    // we could deny sending authentication options at this point, in case no authenticators could
+    // be found for given credential id?
+    // if (userAuthenticators.length < 1) {
+    //   console.log('No authenticators found in DB');
+    //   res.status(401).send(`User ${authuser} is not registered on this server`);
+    //   return;
+    // }
+
     try {
       const options = generateAuthenticationOptions({
         // Require users to use a previously-registered authenticator
