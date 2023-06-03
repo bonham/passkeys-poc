@@ -61,43 +61,53 @@ export function makeRegisterRoute(origin: string, rpID: string, authdb: Autentic
       return;
     }
 
-    if (verification.verified) {
-
-      const { registrationInfo } = verification;
-      if (registrationInfo === undefined) {
-        console.log('registrationInfo is undefined');
-        res.sendStatus(401);
-        return;
-      }
-      const { credentialPublicKey, credentialID, counter, credentialDeviceType, credentialBackedUp } = registrationInfo;
-
-      const newAuthenticator: Authenticator = {
-        credentialPublicKey,
-        credentialID,
-        counter,
-        credentialDeviceType,
-        credentialBackedUp,
-        transports,
-      };
-
-      const saveSuccess = await authdb.saveAuthenticator(newAuthenticator, registrationuser);
-      if (saveSuccess) {
-
-        // Success !!
-        res.json(verification);
-        return;
-
-      } else {
-        console.log('Authenticator could not be saved');
-        res.sendStatus(401);
-        return;
-      }
-
-    } else {
+    if (!verification.verified) {
       console.error('Unexpected: Verification not verified, but no exception thrown before');
       res.sendStatus(401);
       return;
     }
+
+    const { registrationInfo } = verification;
+    if (registrationInfo === undefined) {
+      console.log('registrationInfo is undefined');
+      res.sendStatus(401);
+      return;
+    }
+
+    const { credentialPublicKey, credentialID, counter, credentialDeviceType, credentialBackedUp } = registrationInfo;
+    const newAuthenticator: Authenticator = {
+      credentialPublicKey,
+      credentialID,
+      counter,
+      credentialDeviceType,
+      credentialBackedUp,
+      transports,
+    };
+
+    const saveSuccess = await authdb.saveAuthenticator(newAuthenticator, registrationuser);
+    if (!saveSuccess) {
+      console.log('Authenticator could not be saved');
+      res.sendStatus(401);
+      return;
+    }
+
+    // mark registration key used
+    const regkey = (req.session as any).regkey;
+    if (regkey !== undefined) {
+      const markSuccess = authdb.markRegistrationCodeUsed(regkey);
+      if (!markSuccess) {
+        console.log(`Could not mark regkey ${regkey} as used`);
+        res.sendStatus(401);
+        return;
+      } else {
+        (req.session as any).regkey = undefined;
+      }
+    }
+
+    // Success !!
+    res.json(verification);
+    return;
+
   });
   return router;
 }

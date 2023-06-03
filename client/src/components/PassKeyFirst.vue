@@ -18,8 +18,15 @@ import LoginForm from './LoginForm.vue';
 </script>
 
 <template>
-  <div>
-    <RegistrationForm />
-    <LoginForm />
+  <div class="container">
+    <nav class="p-2 navbar bg-dark border-bottom border-bottom-dark" data-bs-theme="dark">
+      <div class="navbar-brand">Webauthn</div>
+
+    </nav>
+    <div>
+      <RegistrationForm form-label="Register with username" />
+      <RegistrationForm use-registration-key form-label="Register with registration key" />
+      <LoginForm />
+    </div>
   </div>
 </template>

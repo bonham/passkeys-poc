@@ -80,10 +80,10 @@ async function handleLogin() {
 </script>
 <template>
   <div class="border border-secondary-subtle p-3">
-
+    <label for="loginnick" class="form-label">Login</label>
     <div class="input-group">
       <input v-model="loginnickname" type="text" :class="{ 'is-invalid': loginNicknameFieldInValid }" class="form-control"
-        placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2">
+        placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2" id="loginnick">
       <button @click="handleLogin" class="btn btn-outline-secondary" type="button" id="button-addon2">Login</button>
     </div>
     <div class="mt-2">Status: {{ loginstatus }}</div>

@@ -6,6 +6,11 @@ import { startRegistration } from '@simplewebauthn/browser';
 import type { VerifiedRegistrationResponse } from '@simplewebauthn/server'
 import type { RegistrationResponseJSON, PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/typescript-types'
 
+const props = defineProps({
+  useRegistrationKey: Boolean,
+  formLabel: String
+})
+
 const regstatus = ref("None")
 const registernickname = ref("")
 const registerNicknameFieldInValid = ref(false)
@@ -19,7 +24,26 @@ async function handleCreate() {
 
   // GET registration options from the endpoint that calls
   // @simplewebauthn/server -> generateRegistrationOptions()
-  const resp = await getWithCORS('/api/v1/auth/regoptions/' + registernickname.value);
+  let regOptionsUrl: string
+  if (props.useRegistrationKey) {
+    regOptionsUrl = '/api/v1/auth/regoptions/regkey/' + registernickname.value
+  } else {
+    regOptionsUrl = '/api/v1/auth/regoptions/username/' + registernickname.value
+  }
+
+  let resp: Response
+  try {
+    resp = await getWithCORS(regOptionsUrl);
+
+    if (!resp.ok) {
+      regstatus.value = "Failed"
+      return
+    }
+
+  } catch (error) {
+    regstatus.value = getErrorMessage(error)
+    return
+  }
 
   const regoptions = await resp.json() as PublicKeyCredentialCreationOptionsJSON
 
@@ -80,9 +104,10 @@ async function handleCreate() {
 </script>
 <template>
   <div class="border border-secondary-subtle p-3 mb-2 mt-2">
+    <label for="regnick" class="form-label">{{ formLabel }}</label>
     <div class="input-group">
       <input v-model="registernickname" type="text" :class="{ 'is-invalid': registerNicknameFieldInValid }"
-        class="form-control" placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2">
+        class="form-control" placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2" id="regnick">
       <button @click="handleCreate" class="btn btn-outline-secondary" type="button" id="button-addon2">Register</button>
     </div>
     <div class="mt-2">Status: {{ regstatus }}</div>

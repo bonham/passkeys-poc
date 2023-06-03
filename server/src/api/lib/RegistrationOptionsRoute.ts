@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { Request } from 'express-serve-static-core';
+import type { Request, Response } from 'express-serve-static-core';
 
 //import { getRegistrationUserId } from './getRegistrationUserid.js';
 import { AutenticatorDb } from './AuthenticatorDb.js';
@@ -8,32 +8,20 @@ import type { Authenticator } from '../server.js';
 
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 
+const MAX_REGCODE_AGE_MS = 1000 * 60 * 60 * 24; // 1 day
+//const MAX_REGCODE_AGE_MS = 1000 * 60 * 5; // 5 minutes
+
 const router = Router();
+
 
 export function makeRegistrationOptionsRoute(rpName: string, rpID: string, authdb: AutenticatorDb) {
 
-  router.get('/regoptions/:nickname', async (req: Request, res) => {
+  const handleRegistration = async (req: Request, res: Response, reguser: string) => {
 
-    const reguser = req.params.nickname;
-
-    let myreq: any;
-
-    if ('session' in req) {
-      myreq = req as (typeof req & {});
-    } else {
-      console.error('Request does not contain session');
-      res.sendStatus(500);
-      return;
-    }
-
-
-    // (Pseudocode) Retrieve the user from the database
-    // after they've logged in
-    // const user: UserModel = getUserFromDB(loggedInUserId);
 
     //const registrationuser = await getRegistrationUserId();
     const registrationuser = reguser;
-    myreq.session.reguser = registrationuser;
+    (req.session as any).reguser = registrationuser;
 
     // (Pseudocode) Retrieve any of the user's previously-
     // registered authenticators
@@ -59,7 +47,7 @@ export function makeRegistrationOptionsRoute(rpName: string, rpID: string, authd
       });
 
       // (Pseudocode) Remember the challenge for this user
-      myreq.session.challenge = options.challenge;
+      (req.session as any).challenge = options.challenge;
       res.json(options);
 
     } catch (error) {
@@ -68,8 +56,44 @@ export function makeRegistrationOptionsRoute(rpName: string, rpID: string, authd
       return;
 
     }
+  };
+
+  router.get('/regoptions/regkey/:regkey', async (req: Request, res) => {
+
+    const lookup = await authdb.getUserByRegistrationCode(req.params.regkey);
+    (req.session as any).regkey = req.params.regkey; // save to mark as unused later
+
+    if (lookup === null) {
+      console.log('Regkey not found');
+      res.sendStatus(401);
+      return;
+    }
+
+    if (lookup.used) {
+      console.log('Regkey was already used');
+      res.sendStatus(401);
+      return;
+    }
+
+    const createdMilisec = lookup.created.getTime();
+    const nowMilisec = Date.now();
+    const age = nowMilisec - createdMilisec;
+
+    if (age > MAX_REGCODE_AGE_MS) {
+
+      console.log(`Regkey too old: Age: ${age}`);
+      res.sendStatus(401);
+      return;
+    }
+
+    const reguser = lookup.username;
+    await handleRegistration(req, res, reguser);
   });
 
+  router.get('/regoptions/username/:nickname', (req, res) => {
+    const reguser = req.params.nickname;
+    handleRegistration(req, res, reguser);
+  });
 
   return router;
 }

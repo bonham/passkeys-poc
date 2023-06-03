@@ -23,3 +23,7 @@ export type Authenticator = {
   // Ex: ['usb' | 'ble' | 'nfc' | 'internal']
   transports: AuthenticatorTransportFuture[];
 };
+
+export type RegCodeLookup = {
+  'regkey': string, 'username': string, 'created': Date, used: boolean
+};

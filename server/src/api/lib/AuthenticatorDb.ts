@@ -1,6 +1,8 @@
 
 import type { Pool, QueryConfig } from 'pg';
-import type { Authenticator } from '../server.d.ts';
+import type { Authenticator, RegCodeLookup } from '../server.d.ts';
+
+
 
 export class AutenticatorDb {
 
@@ -88,5 +90,49 @@ export class AutenticatorDb {
       return false;
     }
     return true;
+  }
+
+  async getUserByRegistrationCode(regcode: string) {
+    const query: QueryConfig = {
+      text: 'SELECT regkey, username, created, used FROM public.registration_keys where regkey = $1',
+      values: [regcode],
+    };
+
+    try {
+
+      const r = await this.pgpool.query(query);
+      if (r.rows.length != 1) {
+        console.error(`Expected rows length is not 1 but ${r.rows.length}`);
+        return null;
+      } else {
+        return r.rows[0] as RegCodeLookup;
+      }
+
+    } catch (error) {
+      console.error('Could not get registration key details', error);
+      return null;
+    }
+  }
+
+  async markRegistrationCodeUsed(regcode: string): Promise<boolean> {
+    const query: QueryConfig = {
+      text: 'UPDATE public.registration_keys SET used=TRUE WHERE regkey = $1',
+      values: [regcode],
+    };
+
+    try {
+
+      const r = await this.pgpool.query(query);
+      if (r.rowCount != 1) {
+        console.error(`Expected rowcount is not 1 but ${r.rowCount}`);
+        return false;
+      } else {
+        return true;
+      }
+
+    } catch (error) {
+      console.error('DB error when updating DB', error);
+      return false;
+    }
   }
 }
