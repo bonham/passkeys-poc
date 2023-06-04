@@ -76,5 +76,11 @@ router.get('/protected', isAuthenticated, (req, res) => {
   res.send('ok');
 });
 
+router.get('/user', isAuthenticated, (req, res) => {
+  const userid = (req.session as any).user;
+  res.json({ userid });
+  return;
+});
+
 export default router;
 

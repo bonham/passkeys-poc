@@ -28,6 +28,7 @@ export class AutenticatorDb {
         credentialDeviceType: row.credentialdevicetype,
         credentialBackedUp: row.credentialbackedup,
         transports: transportsArray,
+        userid: row.userid,
       };
       for (const [key, value] of Object.entries(a)) {
         let ok = true;
@@ -56,7 +57,7 @@ export class AutenticatorDb {
 
   async getAuthenticatorsById(authenticatorId: string) {
     const query: QueryConfig = {
-      text: 'SELECT credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp, transports FROM public.cred_authenticators where credentialID = $1',
+      text: 'SELECT credentialID, credentialPublicKey, counter, credentialDeviceType, credentialBackedUp, transports, userid FROM public.cred_authenticators where credentialID = $1',
       values: [authenticatorId],
     };
     const res = await this.pgpool.query(query);

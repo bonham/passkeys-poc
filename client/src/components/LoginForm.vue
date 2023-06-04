@@ -62,6 +62,16 @@ async function handleLogin() {
   // Show UI appropriate for the `verified` status
   if (verificationJSON && verificationJSON.verified) {
     loginstatus.value = 'Success!';
+    try {
+      const res = await getWithCORS('/api/v1/auth/user')
+      if (res.ok) {
+        const ro = await res.json()
+        loginstatus.value += ` User: ${ro.userid}`
+      }
+    } catch (error) {
+      console.log("Could not fetch user", error)
+    }
+
   } else {
     loginstatus.value = `Oh no, something went wrong! Response: ${JSON.stringify(
       verificationJSON,
