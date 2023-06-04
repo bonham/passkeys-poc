@@ -11,19 +11,31 @@ import { makeAuthenticationRoute } from './lib/AuthenticationRoute.js';
 import { MySession } from './authInterfaces.js';
 
 
-// Human-readable title for your website
-const rpName = 'elfu SimpleWebAuthn Example';
-// A unique identifier for your website
-const rpID = 'localhost';
-// The URL at which registrations and authentications should occur
-const origin = `http://${rpID}:5173`;
-
 import * as dotenv from 'dotenv';
 const dotenvResult = dotenv.config();
 if (dotenvResult.error) {
   console.error('Missing configuration: Please copy .env.sample to .env and modify config');
   process.exit(1);
 }
+
+if (process.env.WEBAUTHN_RPNAME === undefined) throw Error();
+if (process.env.WEBAUTHN_RPID === undefined) throw Error();
+if (process.env.WEBAUTHN_ORIGIN === undefined) throw Error();
+if (process.env.WEBAUTHN_ORIGIN === undefined) throw Error();
+
+if (process.env.PASSKEYPOC_PGHOST === undefined) throw Error();
+if (process.env.PASSKEYPOC_PGPORT === undefined) throw Error();
+if (process.env.PASSKEYPOC_PGUSER === undefined) throw Error();
+if (process.env.PASSKEYPOC_PGPASSWORD === undefined) throw Error();
+if (process.env.PASSKEYPOC_PGDATABASE === undefined) throw Error();
+
+// Human-readable title for your website
+const rpName = process.env.WEBAUTHN_RPNAME;
+// A unique identifier for your website
+const rpID = process.env.WEBAUTHN_RPID;
+// The URL at which registrations and authentications should occur
+const origin = process.env.WEBAUTHN_ORIGIN;
+
 
 const pgpool = new pg.Pool({
   host: process.env.PASSKEYPOC_PGHOST,
@@ -65,3 +77,4 @@ router.get('/protected', isAuthenticated, (req, res) => {
 });
 
 export default router;
+
