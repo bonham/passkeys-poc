@@ -1,13 +1,11 @@
-import config from '../appconfig'
-
-const BASE_URL = config.BASE_URL
+const BASE_URL = import.meta.env.VITE_BACKEND_URL
 
 async function sendJSONToServer(path: string, payload: string) {
   const body = payload
   const headers = new Headers()
   headers.append("Content-Type", "application/json")
 
-  const url = `${BASE_URL}/${path}`
+  const url = `${BASE_URL}${path}`
   const opts: RequestInit = {
     method: 'POST',
     headers,
@@ -22,7 +20,7 @@ async function sendJSONToServer(path: string, payload: string) {
 
 async function getWithCORS(path: string) {
 
-  const url = `${BASE_URL}/${path}`
+  const url = `${BASE_URL}${path}`
   const opts: RequestInit = {
     method: 'GET',
     credentials: "include"
