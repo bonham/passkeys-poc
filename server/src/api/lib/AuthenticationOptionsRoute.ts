@@ -7,13 +7,16 @@ import { generateAuthenticationOptions } from '@simplewebauthn/server';
 
 const router = Router();
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function makeAuthenticationOptionsRoute(authdb: AutenticatorDb) {
 
   // call this route with /authoptions?authuser=myuserid
-  router.get('/authoptions/:authuser', async (req: Request, res) => {
+  router.get('/authoptions', async (req: Request, res) => {
 
-    const authuser = req.params.authuser;
-    const userAuthenticators: Authenticator[] = await authdb.getUserAuthenticators(authuser);
+    // Seems to make no sense to query user authenticators and send to client - client should discover himself
+    // const authuser = req.params.authuser;
+    // const userAuthenticators: Authenticator[] = await authdb.getUserAuthenticators(authuser);
+    const userAuthenticators: Authenticator[] = [];
 
     // we could deny sending authentication options at this point, in case no authenticators could
     // be found for given credential id?
@@ -36,7 +39,6 @@ export function makeAuthenticationOptionsRoute(authdb: AutenticatorDb) {
       });
 
       (req.session as any).challenge = options.challenge;
-      (req.session as any).authuser = authuser;
 
       res.json(options);
 

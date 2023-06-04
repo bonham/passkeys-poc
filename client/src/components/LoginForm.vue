@@ -7,18 +7,10 @@ import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/typ
 import type { VerifiedAuthenticationResponse, } from '@simplewebauthn/server'
 
 const loginstatus = ref("None")
-const loginnickname = ref("")
-const loginNicknameFieldInValid = ref(false)
 
 async function handleLogin() {
 
-  if (loginnickname.value == "") {
-    loginNicknameFieldInValid.value = true
-    return
-  }
-
-  const authuser = loginnickname.value
-  const authoptionsUrl = "/api/v1/auth/authoptions/" + authuser
+  const authoptionsUrl = "/api/v1/auth/authoptions"
 
   let resp: Response
   try {
@@ -80,12 +72,7 @@ async function handleLogin() {
 </script>
 <template>
   <div class="border border-secondary-subtle p-3">
-    <label for="loginnick" class="form-label">Login</label>
-    <div class="input-group">
-      <input v-model="loginnickname" type="text" :class="{ 'is-invalid': loginNicknameFieldInValid }" class="form-control"
-        placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2" id="loginnick">
-      <button @click="handleLogin" class="btn btn-outline-secondary" type="button" id="button-addon2">Login</button>
-    </div>
+    <button @click="handleLogin" class="btn btn-secondary mb-2">Sign in with passkey</button>
     <div class="mt-2">Status: {{ loginstatus }}</div>
   </div>
 </template>
