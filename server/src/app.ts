@@ -43,7 +43,10 @@ const pgpool = new pg.Pool({
 app.use(session(
   {
     secret: salt,
-    cookie: { maxAge: 60000 },
+    cookie: {
+      maxAge: 60000,
+      sameSite: 'strict',
+    },
     resave: false,
     saveUninitialized: true,
     store: new PGSession({
