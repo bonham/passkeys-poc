@@ -1,9 +1,13 @@
+import config from '../appconfig'
+
+const BASE_URL = config.BASE_URL
+
 async function sendJSONToServer(path: string, payload: string) {
   const body = payload
   const headers = new Headers()
   headers.append("Content-Type", "application/json")
 
-  const url = `http://localhost:5000${path}`
+  const url = `${BASE_URL}/${path}`
   const opts: RequestInit = {
     method: 'POST',
     headers,
@@ -18,7 +22,7 @@ async function sendJSONToServer(path: string, payload: string) {
 
 async function getWithCORS(path: string) {
 
-  const url = `http://localhost:5000${path}`
+  const url = `${BASE_URL}/${path}`
   const opts: RequestInit = {
     method: 'GET',
     credentials: "include"
