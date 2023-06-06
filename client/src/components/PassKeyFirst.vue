@@ -24,8 +24,8 @@ import LoginForm from './LoginForm.vue';
 
     </nav>
     <div>
-      <RegistrationForm form-label="Register with username" />
-      <RegistrationForm use-registration-key form-label="Register with registration key" />
+      <RegistrationForm form-label="Register with username" place-holder="Username" />
+      <RegistrationForm use-registration-key form-label="Register with registration key" place-holder="Key" />
       <LoginForm />
     </div>
   </div>

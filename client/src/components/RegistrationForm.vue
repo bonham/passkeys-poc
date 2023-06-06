@@ -8,7 +8,8 @@ import type { RegistrationResponseJSON, PublicKeyCredentialCreationOptionsJSON }
 
 const props = defineProps({
   useRegistrationKey: Boolean,
-  formLabel: String
+  formLabel: String,
+  placeHolder: String,
 })
 
 const regstatus = ref("None")
@@ -104,10 +105,11 @@ async function handleCreate() {
 </script>
 <template>
   <div class="border border-secondary-subtle p-3 mb-2 mt-2">
-    <label for="regnick" class="form-label">{{ formLabel }}</label>
+    <label :for="placeHolder" class="form-label">{{ formLabel }}</label>
     <div class="input-group">
       <input v-model="registernickname" type="text" :class="{ 'is-invalid': registerNicknameFieldInValid }"
-        class="form-control" placeholder="Nickname" aria-label="Nickname" aria-describedby="button-addon2" id="regnick">
+        class="form-control" :placeholder="placeHolder" aria-label="Nickname" aria-describedby="button-addon2"
+        :id="placeHolder" autocomplete="off">
       <button @click="handleCreate" class="btn btn-outline-secondary" type="button" id="button-addon2">Register</button>
     </div>
     <div class="mt-2">Status: {{ regstatus }}</div>
