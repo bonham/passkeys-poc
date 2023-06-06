@@ -48,6 +48,8 @@ export function makeRegisterRoute(origin: string, rpID: string, authdb: Autentic
         expectedChallenge,
         expectedOrigin: origin,
         expectedRPID: rpID,
+        // for passkeys:
+        requireUserVerification: true,
       });
     } catch (error) {
       console.error(error);

@@ -34,6 +34,12 @@ export function makeRegistrationOptionsRoute(rpName: string, rpID: string, authd
         userID: registrationuser,
         userName: registrationuser, // we do not want personal identifiable information
 
+        // the following is for 'passkeys' usage
+        authenticatorSelection: {
+          residentKey: 'required',
+          userVerification: 'preferred',
+        },
+
         // Don't prompt users for additional information about the authenticator
         // (Recommended for smoother UX)
         attestationType: 'none',

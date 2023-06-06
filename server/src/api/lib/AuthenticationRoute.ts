@@ -34,6 +34,8 @@ export function makeAuthenticationRoute(origin: string, rpID: string, authdb: Au
         expectedOrigin: origin,
         expectedRPID: rpID,
         authenticator: authenticators[0],
+        // for passkeys:
+        requireUserVerification: true,
       });
     } catch (error) {
       console.error('Auth verification failed', error);
