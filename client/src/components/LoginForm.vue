@@ -6,6 +6,8 @@ import { startAuthentication } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/typescript-types'
 import type { VerifiedAuthenticationResponse, } from '@simplewebauthn/server'
 
+const emit = defineEmits(['changed'])
+
 const loginstatus = ref("None")
 
 async function handleLogin() {
@@ -17,11 +19,13 @@ async function handleLogin() {
     resp = await getWithCORS(authoptionsUrl);
   } catch (error) {
     loginstatus.value = getErrorMessage(error)
+    emit('changed')
     return
   }
   if (!resp.ok) {
     const t = await resp.text()
     loginstatus.value = t
+    emit('changed')
     return
   }
 
@@ -35,6 +39,7 @@ async function handleLogin() {
   } catch (error) {
     // Some basic error handling
     loginstatus.value = "Start Auth error: " + String(error);
+    emit('changed')
     return
   }
 
@@ -46,12 +51,14 @@ async function handleLogin() {
     if (!verificationResp.ok) {
       console.log(`Verification failed with response:`, verificationResp)
       loginstatus.value = "Failed"
+      emit('changed')
       return
     }
   } catch (error) {
     const msg = getErrorMessage(error);
     console.log("Error when calling registration endpoint: " + msg);
     loginstatus.value = "Failed"
+    emit('changed')
     return
   }
 
@@ -61,22 +68,15 @@ async function handleLogin() {
 
   // Show UI appropriate for the `verified` status
   if (verificationJSON && verificationJSON.verified) {
+
     loginstatus.value = 'Success!';
-    try {
-      const res = await getWithCORS('/api/v1/auth/user')
-      if (res.ok) {
-        const ro = await res.json()
-        loginstatus.value += ` User: ${ro.userid}`
-      }
-    } catch (error) {
-      console.log("Could not fetch user", error)
-    }
 
   } else {
     loginstatus.value = `Oh no, something went wrong! Response: ${JSON.stringify(
       verificationJSON,
     )}`;
   }
+  emit('changed')
 };
 
 </script>
