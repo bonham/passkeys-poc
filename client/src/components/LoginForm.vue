@@ -8,9 +8,11 @@ import type { VerifiedAuthenticationResponse, } from '@simplewebauthn/server'
 
 const emit = defineEmits(['changed'])
 
-const loginstatus = ref("None")
+const loginstatus = ref("")
 
 async function handleLogin() {
+
+  loginstatus.value = ""
 
   const authoptionsUrl = "/api/v1/auth/authoptions"
 
@@ -83,6 +85,6 @@ async function handleLogin() {
 <template>
   <div class="border border-secondary-subtle p-3">
     <button @click="handleLogin" class="btn btn-secondary mb-2">Sign in with passkey</button>
-    <div class="mt-2">Status: {{ loginstatus }}</div>
+    <div v-if="loginstatus" class="mt-2">Status: {{ loginstatus }}</div>
   </div>
 </template>

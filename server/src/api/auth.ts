@@ -7,6 +7,7 @@ import { makeRegisterRoute } from './lib/RegisterRoute.js';
 import { makeRegistrationOptionsRoute } from './lib/RegistrationOptionsRoute.js';
 import { makeAuthenticationOptionsRoute } from './lib/AuthenticationOptionsRoute.js';
 import { makeAuthenticationRoute } from './lib/AuthenticationRoute.js';
+import { makeLogoutRoute } from './lib/LogoutRoute.js';
 
 import { MySession } from './authInterfaces.js';
 
@@ -56,6 +57,8 @@ const authentiationOptionsRoute = makeAuthenticationOptionsRoute(authdb);
 router.use(authentiationOptionsRoute);
 const authenticationRoute = makeAuthenticationRoute(origin, rpID, authdb);
 router.use(authenticationRoute);
+const logoutRoute = makeLogoutRoute();
+router.use(logoutRoute);
 
 // middleware to test if authenticated
 function isAuthenticated(req: Request, res: Response, next: NextFunction) {
@@ -76,8 +79,10 @@ router.get('/protected', isAuthenticated, (req, res) => {
   res.send('ok');
 });
 
-router.get('/user', isAuthenticated, (req, res) => {
-  const userid = (req.session as any).user;
+// not protected 
+router.get('/user', (req, res) => {
+
+  const userid = (req.session as any).user as (string | undefined);
   res.json({ userid });
   return;
 });
