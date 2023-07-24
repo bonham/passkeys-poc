@@ -3,10 +3,6 @@ import PassKeyFirst from './components/PassKeyFirst.vue';
 </script>
 
 <template>
-  <header>
-    <div>
-      <PassKeyFirst />
-    </div>
-  </header>
+  <PassKeyFirst />
 </template>
 

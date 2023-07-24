@@ -11,6 +11,7 @@ import * as middlewares from './middlewares.js';
 import api from './api/index.js';
 
 import * as dotenv from 'dotenv';
+
 const dotenvResult = dotenv.config();
 if (dotenvResult.error) {
   console.error('Missing configuration: Please copy .env.sample to .env and modify config');
@@ -42,7 +43,10 @@ const pgpool = new pg.Pool({
 app.use(session(
   {
     secret: salt,
-    cookie: { maxAge: 60000 },
+    cookie: {
+      maxAge: 60000,
+      sameSite: 'strict',
+    },
     resave: false,
     saveUninitialized: true,
     store: new PGSession({
